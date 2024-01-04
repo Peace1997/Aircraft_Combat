@@ -1,57 +1,36 @@
-"""
-Author: Chenxu Qian
-Email: qianchenxu@mail.nankai.edu.cn
-使用RLlib库与强化学习算法训练1v1智能体的简单案例
-"""
-
 import param
-from typing import Any, Dict
-import ray
-from ray.rllib.algorithms import ppo
-from trainable_class.custom_policy.custom_policy_example import Custom_Trainable_Policy
-from ray.tune.logger import pretty_print
-from custom_env.DogFight import DogFight
+from custom_env.dog_flight import DogFight
 import os
 import atexit
+import torch
+from utils.obs_config import *
+import copy
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+import gymnasium as gym
 
 
-@atexit.register
 def exit():
     os.system("ps -ef|grep ZK.x86_64|grep -v grep |awk '{print $2}'|xargs kill -9")
     os.system("taskkill /F /IM ZK.exe")
 
-
-def train(args, train_config: Dict[str, Any], train_num: int, save_folder=None, checkpoint_path=None) -> None:
-    """Train the trainable_class with n_iters iterations."""
-
-    agent = Custom_Trainable_Policy(config=train_config, env=train_config["env"])
-    if checkpoint_path:
-        agent.restore(checkpoint_path)
-    while True:
-        result = agent.train()
-        train_num += 1
-        print(pretty_print(result))
-        if train_num % args.evaluation_interval == 0:
-            try:
-                reward_mean = result['evaluation']['episode_reward_mean']
-            except Exception as e:
-                reward_mean = 0
-            checkpoint_path = agent.save(os.path.join(
-                save_folder, 'checkpoint_%06d_%.1f' % (train_num, reward_mean)))
-            print(f"Checkpoint saved in {checkpoint_path}")
-
-
 if __name__ == "__main__":
     args = param.parser.parse_args()
-    args.excute_path = r"D:\combat_env\Windows\ZK.exe"
-    args.save_folder = 'D:\Aircraft_Combat\combat_1v1_for_0_2\data'
-    args.num_workers = 1
-    args.evaluation_num_workers = 1
+    args.excute_path = r'D:\combat_env\Windows\ZK.exe'
+    args.save_folder = 'data/output/tmp'
     args.checkpoint = None
     args.render = 1
     args.lr = 1e-5
-    args.frame_feature_size = 24
-    ray.init()
+    args.red_num = 1
+    args.blue_num = 1
+    obs_c_i = obs_control_info.copy()
+    obs_a_i = obs_info.copy()
+    args.frame_feature_size = 3
+    args.obs_c_i = obs_c_i
+    args.obs_c_FFS = len(obs_c_i)
+    args.a_c_FFS = 4
+    args.obs_a_i = obs_a_i
+    args.obs_w_FFS = len(obs_a_i) + 8
 
     config = {
         "env": DogFight,
@@ -100,9 +79,3 @@ if __name__ == "__main__":
         'sgd_minibatch_size': 250,  # 每次mini-batch-size的大小，这个值越大，计算越省时，主要也得看gpu是否使用，如果gpu不用，那大了也没意义
         "framework": "torch",
     }
-    train_config = ppo.DEFAULT_CONFIG.copy()
-    train_config.update(config)
-    print("Start training.")
-    train(args, train_config, train_num=args.train_num,
-          save_folder=args.save_folder,
-          checkpoint_path=args.checkpoint)

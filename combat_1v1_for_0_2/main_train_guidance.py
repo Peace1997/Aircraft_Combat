@@ -10,7 +10,8 @@ import ray
 from ray.rllib.algorithms import ppo
 from trainable_class.custom_policy.custom_policy_example import Custom_Trainable_Policy
 from ray.tune.logger import pretty_print
-from custom_env.DogFight import DogFight
+#from custom_env.DogFight import DogFight
+from custom_env.env_guidance import DogFight
 import os
 import atexit
 
@@ -44,13 +45,14 @@ def train(args, train_config: Dict[str, Any], train_num: int, save_folder=None, 
 if __name__ == "__main__":
     args = param.parser.parse_args()
     args.excute_path = r"D:\combat_env\Windows\ZK.exe"
-    args.save_folder = 'D:\Aircraft_Combat\combat_1v1_for_0_2\data'
-    args.num_workers = 1
-    args.evaluation_num_workers = 1
+    args.save_folder = 'data/output/tmp'
+    args.num_workers = 0
+    args.evaluation_num_workers = 0
     args.checkpoint = None
     args.render = 1
     args.lr = 1e-5
-    args.frame_feature_size = 24
+    args.frame_feature_size = 6
+
     ray.init()
 
     config = {
